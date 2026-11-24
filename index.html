@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ASCII Fish Tank</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* VOICE   occasion: a small, hushed toy that glows in the dark
+   IDEA    the clear acrylic display tank from the reel, fed from its e-ink FISH FOOD shaker
+   PICTURE the tank itself, nearly full screen: ASCII fish, flakes, bubbles and weed glowing in smoked water
+   COLOUR  charcoal wall, smoked water, fish cyan #3fbfff, flakes amber #ffb627, weed mint #2ee6a0, stand teal #92d8d2, e-paper #dedcd4
+   TYPE    JetBrains Mono 700 for every glyph and line; Courier Prime 700 on the shaker's label
+   LAYOUT  one screen: shaker over the open top, tank in the middle, teal stand along the bottom with the hint; tank capped at 620px, centred on a laptop */
+:root{color-scheme:dark;--teal:#92d8d2;--teal-hi:#c3efea;--teal-ink:#123f3c;--ink:#1c1c1a;--mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--tx:16px;--ty:130px;--tw:calc(100% - 32px);--th:60%;--sx:0px;--sw:100%;--sy:88%;--cw:68px;--ch:97px}
+:root[data-theme=light],:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html,body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none}
+body{background:#111316 radial-gradient(90% 60% at 50% 42%,#20252a 0%,#14171a 55%,#0b0c0e 100%);color:#e8f3f5;font:500 14px/1.45 var(--mono);-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+#app{position:fixed;inset:0;touch-action:none;cursor:pointer}
+.stand{position:absolute;left:var(--sx);width:var(--sw);top:var(--sy);bottom:0;display:grid;place-items:center;padding:24px 16px 12px;border-radius:6px 6px 0 0;background:linear-gradient(180deg,#dcf7f3 0 2px,var(--teal-hi) 2px 12px,var(--teal) 12px,#84cbc5);color:var(--teal-ink);text-align:center}
+.stand p{margin:0}
+.tank,.sheen{position:absolute;left:var(--tx);top:var(--ty);width:var(--tw);height:var(--th);border-radius:5px 5px 3px 3px}
+.tank{background:linear-gradient(180deg,rgba(30,62,78,.6),rgba(9,18,26,.93) 62%,rgba(6,12,18,.96));box-shadow:inset 0 0 0 1px rgba(200,236,255,.2),inset 7px 0 0 rgba(190,230,255,.05),inset -7px 0 0 rgba(190,230,255,.04),inset 0 -9px 0 rgba(190,230,255,.06),0 6px 10px -4px rgba(0,0,0,.55)}
+.tank::before{content:"";position:absolute;inset:0 0 auto;height:14px;border-radius:5px 5px 0 0;background:linear-gradient(180deg,rgba(220,244,255,.26),rgba(220,244,255,.06));border-bottom:1px solid rgba(220,244,255,.16)}
+canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.sheen{pointer-events:none;background:linear-gradient(110deg,transparent 18%,rgba(255,255,255,.045) 18% 27%,transparent 27% 66%,rgba(255,255,255,.03) 66% 69%,transparent 69%)}
+#shaker{position:absolute;left:0;top:0;width:var(--cw);height:var(--ch);padding:calc(var(--cw)*.075);border-radius:calc(var(--cw)*.13);background:linear-gradient(155deg,#fdfcf9,#e3e1da);box-shadow:inset 0 -3px 0 rgba(0,0,0,.1),inset 0 1px 0 #fff,0 7px 14px rgba(0,0,0,.45);cursor:grab;touch-action:none;will-change:transform;outline:none}
+#shaker.held{cursor:grabbing}
+#shaker:focus-visible{box-shadow:0 0 0 3px #3fbfff,0 7px 14px rgba(0,0,0,.45)}
+.eink{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:calc(var(--cw)*.06) calc(var(--cw)*.05);border-radius:3px;background:linear-gradient(180deg,#e5e3db,#d4d2c9);color:var(--ink);font-family:"Courier Prime",ui-monospace,monospace;font-weight:700;text-align:center;line-height:1}
+.trim{width:100%;height:calc(var(--cw)*.05);background:repeating-linear-gradient(90deg,var(--ink) 0 2px,transparent 2px 4px)}
+.eink b{font-size:calc(var(--cw)*.27);line-height:.86}
+.tag{font:700 calc(var(--cw)*.115)/1 var(--mono);border:1.5px solid var(--ink);border-radius:99px;padding:.22em .4em;white-space:nowrap}
+.eink i{font-style:normal;font-size:calc(var(--cw)*.12);letter-spacing:.05em}
+</style>
+</head>
+<body>
+<main id="app" aria-label="ASCII fish tank. Tap the water to drop fish food.">
+  <div class="stand"><p>Tap the water to feed.<br>Or grab the flakes and shake.</p></div>
+  <div class="tank"></div>
+  <canvas id="fx" aria-hidden="true"></canvas>
+  <div class="sheen"></div>
+  <div id="shaker" role="button" tabindex="0" hidden aria-label="Fish food flakes. Drag and shake to sprinkle, or press Enter. Arrow keys move it.">
+    <div class="eink"><span class="trim"></span><b>FISH<br>FOOD</b><span class="tag">&gt;&lt;(((o&gt;</span><i>FLAKES</i><span class="trim"></span></div>
+  </div>
+</main>
+<script>
+{
+const app = document.getElementById('app');
+const cv = document.getElementById('fx');
+const ctx = cv.getContext('2d');
+const shaker = document.getElementById('shaker');
+const rootStyle = document.documentElement.style;
+const MONO = '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+const C = {
+  fish: ['#3fbfff', '#d8f6ff'],
+  bubble: ['#4aa3ff', '#cfe8ff'],
+  food: ['#ffb627', '#fff0bf'],
+  food2: ['#ffd54a', '#fff6d6'],
+  weed: ['#2ee6a0', '#c8ffe9'],
+  word: ['#eee6a8', '#fffbe6']
+};
+const WORDS = ['*chomp*', '*crunch*', 'gulp', '*munch*', 'nom', '*gulp*'];
+const FOOD = ['o', 'o', 'o', '°', '*', '*', '·'];
+const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const rnd = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[Math.random() * a.length | 0];
+const ease = (dt, k) => 1 - Math.exp(-dt * k);
+
+let W = 0, H = 0, dpr = 1, fs = 24, cw = 68, ch = 97, half = 40;
+let t = 0, last = 0, wordCool = 0, weedT = 4;
+const T = {x0: 0, x1: 0, y0: 0, y1: 0, w: 0, surface: 0, floor: 0};
+const B = {x0: 0, x1: 0, y0: 0, y1: 0};
+const sprites = new Map(), weeds = [], flakes = [], bubbles = [], words = [], ripples = [];
+const fish = {x: 0, y: 0, vx: 0, vy: 0, face: 1, mouth: 0, goal: null, goalT: 0, idle: 3, target: null, look: 0, belly: 0, burp: 0, breath: 2};
+const sh = {x: 0, y: 0, a: -8, tx: 0, mode: 'rest', held: false, shakes: 0, shakeT: 0, jolt: 0, jv: 0, energy: 0, gx: 0, gy: 0, px: 0, py: 0, lx: 0, ly: 0, lt: 0, vx: 0, vy: 0};
+
+function layout() {
+  W = innerWidth; H = innerHeight; dpr = Math.min(devicePixelRatio || 1, 2);
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const side = W < 600 ? 16 : clamp(W * .06, 24, 72);
+  const standTop = H - clamp(H * .1, 70, 104);
+  T.w = Math.min(W - side * 2, 620); T.x0 = (W - T.w) / 2; T.x1 = T.x0 + T.w;
+  cw = Math.round(clamp(T.w * .19, 62, 88)); ch = Math.round(cw * 1.42);
+  T.y0 = clamp(Math.max(H * .17, ch + 34), 118, 180); T.y1 = standTop + 7;
+  T.surface = T.y0 + 15; T.floor = T.y1 - 9;
+  fs = Math.round(clamp(Math.min(T.w * .072, (T.y1 - T.y0) * .07), 18, 34));
+  ctx.font = `700 ${fs}px ${MONO}`;
+  half = ctx.measureText('><(((o>').width / 2;
+  B.x0 = T.x0 + half + 8; B.x1 = T.x1 - half - 8; B.y0 = T.surface + fs * .55; B.y1 = T.floor - fs * .6;
+  const sw = Math.min(W, T.w + 2 * clamp(W * .05, 16, 56));
+  const vars = {tx: T.x0, ty: T.y0, tw: T.w, th: T.y1 - T.y0, sx: (W - sw) / 2, sw, sy: standTop, cw, ch};
+  for (const k in vars) rootStyle.setProperty('--' + k, vars[k] + 'px');
+  sprites.clear();
+  fish.x = clamp(fish.x, B.x0, B.x1); fish.y = clamp(fish.y, B.y0, B.y1);
+  sh.tx = clamp(sh.tx, T.x0 + cw / 2, T.x1 - cw / 2);
+}
+
+// Glowing glyphs are drawn once into small canvases, then stamped every frame.
+function glyph(txt, size, [col, core]) {
+  const key = txt + '|' + size + col;
+  let s = sprites.get(key);
+  if (s) return s;
+  const c = document.createElement('canvas'), g = c.getContext('2d'), font = `700 ${size}px ${MONO}`;
+  g.font = font;
+  const pad = size * .6, w = Math.ceil(g.measureText(txt).width + pad * 2), h = Math.ceil(size * 1.3 + pad * 2);
+  c.width = Math.ceil(w * dpr); c.height = Math.ceil(h * dpr);
+  g.scale(dpr, dpr); g.font = font; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillStyle = g.shadowColor = col; g.shadowBlur = size * .45 * dpr;
+  g.fillText(txt, w / 2, h / 2); g.fillText(txt, w / 2, h / 2);
+  g.shadowBlur = 0; g.globalAlpha = .5; g.fillStyle = core; g.fillText(txt, w / 2, h / 2);
+  s = {c, w, h}; sprites.set(key, s); return s;
+}
+function ring(r) {
+  r = Math.max(2, Math.round(r));
+  const key = 'ring' + r;
+  let s = sprites.get(key);
+  if (s) return s;
+  const w = Math.ceil(r * 3.6 + 12), c = document.createElement('canvas'), g = c.getContext('2d');
+  c.width = c.height = Math.ceil(w * dpr); g.scale(dpr, dpr);
+  g.lineWidth = Math.max(1.5, r * .24); g.strokeStyle = g.shadowColor = C.bubble[0]; g.shadowBlur = (r * .5 + 4) * dpr;
+  g.beginPath(); g.arc(w / 2, w / 2, r, 0, Math.PI * 2); g.stroke(); g.stroke();
+  g.shadowBlur = 0; g.globalAlpha = .6; g.lineWidth *= .45; g.strokeStyle = C.bubble[1]; g.stroke();
+  s = {c, w, h: w}; sprites.set(key, s); return s;
+}
+function put(s, x, y) { ctx.drawImage(s.c, x - s.w / 2, y - s.h / 2, s.w, s.h); }
+
+function ripple(x, s) { if (ripples.length < 16) ripples.push({x, s, t: 0}); }
+function bubble(x, y, r) { if (bubbles.length < 60) bubbles.push({x, y, r, ph: rnd(0, 6.3), v: rnd(1.6, 2.4) * fs, t: 0}); }
+function say(txt, x, y, follow = false) { if (words.length < 5) words.push({txt, x: clamp(x, T.x0 + fs * 2, T.x1 - fs * 2), y, follow, t: 0}); }
+function flake(x, y, vx, vy) {
+  if (flakes.length >= 160) flakes.splice(Math.max(0, flakes.findIndex(f => f.st === 'rest')), 1)[0].gone = true;
+  const wet = y > T.surface;
+  flakes.push({x, y, vx, vy: wet ? fs * .5 : vy, st: wet ? 'sink' : 'air', t: 0, ft: rnd(.15, 1.1), ch: pick(FOOD),
+    sz: Math.round(fs * (Math.random() < .3 ? .62 : .5)), c: Math.random() < .35 ? C.food2 : C.food, ph: rnd(0, 6.3), sink: rnd(.9, 1.5) * fs, gone: false});
+}
+function spout() { const a = sh.a * Math.PI / 180, r = ch * .5; return [sh.x + r * Math.sin(a), sh.y + sh.jolt - r * Math.cos(a)]; }
+function sprinkle(n) {
+  const [x, y] = spout();
+  for (let i = 0; i < n; i++) flake(x + rnd(-cw * .22, cw * .22), y, rnd(-50, 50) + sh.vx * .15, rnd(40, 150));
+}
+
+function stepShaker(dt) {
+  const lo = T.x0 + cw / 2, hi = T.x1 - cw / 2, x0 = sh.x;
+  let ta;
+  if (sh.mode === 'drag') {
+    sh.x += (clamp(sh.px, lo, hi) - sh.x) * ease(dt, 30);
+    sh.y += (clamp(sh.py, ch * .5 + 4, T.surface - 6) - sh.y) * ease(dt, 30);
+    sh.vx *= Math.exp(-dt * 6); sh.vy *= Math.exp(-dt * 6);
+    ta = 172 + clamp(sh.vx * .02, -18, 18);
+    sh.energy = Math.min(8, sh.energy + Math.hypot(sh.vx, sh.vy) * dt / 500);
+    while (sh.energy >= 1 && sh.a > 130) { sprinkle(1); sh.energy -= 1; }
+  } else {
+    sh.tx = clamp(sh.tx, lo, hi);
+    sh.x += (sh.tx - sh.x) * ease(dt, sh.mode === 'pour' ? 9 : 6);
+    let ty;
+    if (sh.mode === 'pour') {
+      ty = T.y0 - ch * .5 + 2; ta = 172;
+      if (sh.a > 140 && Math.abs(sh.x - sh.tx) < cw * .6 && (sh.shakeT -= dt) <= 0) {
+        if (sh.shakes > 0 || sh.held) { sh.shakes--; sh.shakeT = .2; sh.jv = fs * 16; sprinkle(4 + (Math.random() * 4 | 0)); }
+        else sh.mode = 'rest';
+      }
+    } else {
+      ty = T.y0 - ch * .5 - 12 + (calm ? 0 : Math.sin(t * 1.6) * 3);
+      ta = -8 + (calm ? 0 : Math.sin(t * 1.1) * 2);
+    }
+    sh.y += (ty - sh.y) * ease(dt, 8);
+    sh.vx = (sh.x - x0) / dt;
+  }
+  sh.a += (ta - sh.a) * ease(dt, 11);
+  sh.jv += (-sh.jolt * 900 - sh.jv * 22) * dt; sh.jolt += sh.jv * dt;
+  shaker.style.transform = `translate3d(${sh.x - cw / 2}px,${sh.y + sh.jolt - ch / 2}px,0) rotate(${sh.a}deg)`;
+}
+
+function stepFlakes(dt) {
+  for (let i = flakes.length; i--;) {
+    const f = flakes[i];
+    f.t += dt;
+    if (f.st === 'air') {
+      f.vy += 1100 * dt; f.x += f.vx * dt; f.y += f.vy * dt; f.vx *= 1 - dt * .6;
+      if (f.y >= T.surface) { f.st = 'float'; f.t = 0; f.y = T.surface + 2; f.vx *= .3; ripple(f.x, .5); }
+    } else if (f.st === 'float') {
+      f.x += f.vx * dt; f.vx *= 1 - dt * 2; f.y = T.surface + 2 + Math.sin(t * 3 + f.ph);
+      if (f.t > f.ft) { f.st = 'sink'; f.t = 0; f.vy = fs * .3; }
+    } else if (f.st === 'sink') {
+      f.vy += (f.sink - f.vy) * ease(dt, 2.5); f.y += f.vy * dt;
+      f.x += (Math.sin(f.t * 2.2 + f.ph) * fs * .5 + f.vx) * dt; f.vx *= 1 - dt * 2;
+      const rest = T.floor - f.sz * .35;
+      if (f.y >= rest) { f.y = rest; f.st = 'rest'; f.t = 0; }
+    } else if (f.t > 40) { f.gone = true; flakes.splice(i, 1); continue; }
+    if (f.st !== 'air') f.x = clamp(f.x, T.x0 + 8, T.x1 - 8);
+  }
+}
+
+function nearest() {
+  const mx = fish.x + fish.face * half, my = fish.y;
+  let best = null, bd = Infinity;
+  for (const f of flakes) {
+    if (f.st === 'air') continue;
+    const d = (f.x - mx) ** 2 + (f.y - my) ** 2;
+    if (d < bd) { bd = d; best = f; }
+  }
+  return best;
+}
+function eat(mx, my) {
+  fish.mouth = .3;
+  if (Math.random() < .5) bubble(mx + fish.face * fs * .2, my - fs * .25, rnd(fs * .09, fs * .2));
+  if (wordCool <= 0) { say(pick(WORDS), mx + rnd(-fs * .6, fs * .6), my - fs * rnd(.9, 1.5)); wordCool = rnd(.3, .55); }
+  if ((fish.belly += 1) >= 20 && fish.burp <= 0) { fish.belly = 0; fish.burp = .8; }
+}
+function stepFish(dt) {
+  const F = fish;
+  if ((F.look -= dt) <= 0 || (F.target && F.target.gone)) { F.target = nearest(); F.look = .3; }
+  let gx, gy, sp, k;
+  if (F.target) {
+    if (F.idle > 2.5) say('!', 0, 0, true);
+    F.idle = 0;
+    // Face the food, unless that would put the fish's body through the glass.
+    const f = F.target, dx = f.x - F.x;
+    let face = Math.abs(dx) > fs * .5 ? Math.sign(dx) : F.face;
+    if (face > 0 && f.x - half * .9 < B.x0) face = -1;
+    else if (face < 0 && f.x + half * .9 > B.x1) face = 1;
+    F.face = face;
+    gx = f.x - face * half * .9; gy = f.y; sp = fs * 6.5; k = 5;
+  } else {
+    F.idle += dt;
+    if (!F.goal || (F.goalT -= dt) <= 0) { F.goal = [rnd(B.x0, B.x1), rnd(B.y0, B.y1)]; F.goalT = rnd(3, 6.5); }
+    [gx, gy] = F.goal; sp = fs * 1.7; k = 1.8;
+  }
+  gx = clamp(gx, B.x0, B.x1); gy = clamp(gy, B.y0, B.y1);
+  const dx = gx - F.x, dy = gy - F.y, d = Math.hypot(dx, dy) || 1;
+  const s = Math.min(sp, d * (F.target ? 6 : 1.2)), e = ease(dt, k);
+  F.vx += (dx / d * s - F.vx) * e; F.vy += (dy / d * s * .75 - F.vy) * e;
+  F.x = clamp(F.x + F.vx * dt, B.x0, B.x1); F.y = clamp(F.y + F.vy * dt, B.y0, B.y1);
+  if (!F.target && Math.abs(F.vx) > fs * .45) F.face = Math.sign(F.vx);
+  const mx = F.x + F.face * half * .9, my = F.y, r2 = (fs * .62) ** 2;
+  for (let i = flakes.length; i--;) {
+    const f = flakes[i];
+    if (f.st !== 'air' && (f.x - mx) ** 2 + (f.y - my) ** 2 < r2) { f.gone = true; flakes.splice(i, 1); eat(mx, my); }
+  }
+  F.mouth = Math.max(0, F.mouth - dt);
+  F.belly = Math.max(0, F.belly - dt * .15);
+  if (F.burp > 0 && (F.burp -= dt) <= 0) { say('*burp*', mx, my - fs * 1.1); bubble(mx + F.face * fs * .3, my - fs * .4, fs * .42); }
+  if ((F.breath -= dt) <= 0) { bubble(mx + F.face * fs * .15, my - fs * .25, rnd(fs * .07, fs * .13)); F.breath = rnd(3, 7); }
+}
+
+function stepFx(dt) {
+  wordCool -= dt;
+  for (let i = bubbles.length; i--;) {
+    const b = bubbles[i];
+    b.t += dt; b.y -= b.v * dt * (.7 + b.r / fs); b.x += Math.sin(b.t * 3 + b.ph) * fs * .35 * dt;
+    if (b.y - b.r <= T.surface + 2) { ripple(b.x, .35 + b.r / fs); bubbles.splice(i, 1); }
+  }
+  for (let i = words.length; i--;) if ((words[i].t += dt) > 1.3) words.splice(i, 1);
+  for (let i = ripples.length; i--;) if ((ripples[i].t += dt) > .7) ripples.splice(i, 1);
+  if (!calm && (weedT -= dt) <= 0) {
+    const w = pick(weeds);
+    bubble(T.x0 + T.w * w.f, T.floor - w.n * fs * .8, rnd(fs * .08, fs * .15));
+    weedT = rnd(4, 9);
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(150,220,255,.22)'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let x = T.x0 + 3; x <= T.x1 - 3; x += 6) ctx.lineTo(x, T.surface + Math.sin(x * .045 + t * 1.8) * 1.2);
+  ctx.stroke();
+  for (const r of ripples) {
+    const k = r.t / .7;
+    ctx.globalAlpha = (1 - k) * .5;
+    ctx.beginPath(); ctx.ellipse(r.x, T.surface + 1, fs * (.2 + k * 1.1) * r.s, fs * (.05 + k * .22) * r.s, 0, 0, Math.PI * 2); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  const ws = Math.round(fs * .95), sway = calm ? .3 : 1;
+  for (const w of weeds) {
+    for (let j = 0; j < w.n; j++) {
+      const lean = Math.sin(t * w.sp * sway + w.ph - j * .9);
+      const x = T.x0 + T.w * w.f + (calm ? 0 : Math.sin(t * w.sp * .7 + w.ph - j * .6) * fs * .07 * (j + 1));
+      put(glyph(lean > 0 ? '(' : ')', ws, C.weed), x, T.floor - fs * .42 - j * fs * .8);
+    }
+  }
+  for (const f of flakes) {
+    ctx.globalAlpha = f.st === 'rest' && f.t > 36 ? 1 - (f.t - 36) / 4 : 1;
+    put(glyph(f.ch, f.sz, f.c), f.x, f.y);
+  }
+  ctx.globalAlpha = 1;
+  const m = fish.mouth > .19 ? 0 : fish.mouth > .08 ? 1 : 2;
+  const body = fish.face > 0 ? '><(((o' + '<=>'[m] : '>=<'[m] + 'o)))><';
+  put(glyph(body, fs, C.fish), fish.x, fish.y + (calm ? 0 : Math.sin(t * 2.3) * fs * .05));
+  for (const b of bubbles) put(ring(b.r), b.x, b.y);
+  const wsz = Math.round(fs * .52);
+  for (const w of words) {
+    ctx.globalAlpha = w.t < .12 ? w.t / .12 : 1 - clamp((w.t - .55) / .75, 0, 1);
+    if (w.follow) put(glyph(w.txt, Math.round(fs * .8), C.word), fish.x + fish.face * half * .45, fish.y - fs * (1 + .25 * Math.sin(Math.min(w.t / .3, 1) * Math.PI)));
+    else put(glyph(w.txt, wsz, C.word), w.x, w.y - w.t * fs * .8);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function frame(now) {
+  const dt = Math.min(.05, Math.max(.001, (now - last) / 1000));
+  last = now; t += dt;
+  stepShaker(dt); stepFlakes(dt); stepFish(dt); stepFx(dt); draw();
+  requestAnimationFrame(frame);
+}
+
+let pid = null, downT = 0, downX = 0, downY = 0;
+shaker.addEventListener('pointerdown', e => {
+  e.stopPropagation();
+  if (pid !== null) return;
+  pid = e.pointerId; shaker.setPointerCapture(pid); shaker.classList.add('held');
+  sh.mode = 'drag'; sh.held = false; sh.gx = e.clientX - sh.x; sh.gy = e.clientY - sh.y; sh.px = sh.x; sh.py = sh.y;
+  sh.lx = downX = e.clientX; sh.ly = downY = e.clientY; sh.lt = downT = e.timeStamp; sh.vx = sh.vy = 0; sh.energy = 3;
+});
+app.addEventListener('pointerdown', e => {
+  if (pid !== null) return;
+  pid = e.pointerId; app.setPointerCapture(pid);
+  sh.mode = 'pour'; sh.held = true; sh.tx = e.clientX; sh.shakes = Math.max(sh.shakes, 3);
+});
+addEventListener('pointermove', e => {
+  if (e.pointerId !== pid) return;
+  if (sh.mode !== 'drag') { sh.tx = e.clientX; return; }
+  const dtp = Math.max(.008, (e.timeStamp - sh.lt) / 1000);
+  const nvx = (sh.vx + (e.clientX - sh.lx) / dtp) / 2, nvy = (sh.vy + (e.clientY - sh.ly) / dtp) / 2;
+  sh.energy = Math.min(8, sh.energy + Math.hypot(nvx - sh.vx, nvy - sh.vy) / 700);
+  sh.vx = nvx; sh.vy = nvy; sh.lx = e.clientX; sh.ly = e.clientY; sh.lt = e.timeStamp;
+  sh.px = e.clientX - sh.gx; sh.py = e.clientY - sh.gy;
+});
+function release(e) {
+  if (e.pointerId !== pid) return;
+  pid = null; sh.held = false; shaker.classList.remove('held');
+  if (sh.mode !== 'drag') return;
+  const tap = e.timeStamp - downT < 250 && Math.hypot(e.clientX - downX, e.clientY - downY) < 10;
+  sh.tx = sh.x; sh.mode = tap ? 'pour' : 'rest';
+  if (tap) sh.shakes = 3;
+}
+addEventListener('pointerup', release);
+addEventListener('pointercancel', release);
+app.addEventListener('contextmenu', e => e.preventDefault());
+shaker.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); sh.mode = 'pour'; sh.tx = sh.x; sh.shakes = Math.max(sh.shakes, 3); }
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); sh.tx += (e.key === 'ArrowLeft' ? -1 : 1) * cw * .6; }
+});
+
+function start() {
+  layout();
+  const n = Math.max(2, Math.round(T.w / 110));
+  for (let i = 0; i < n; i++) weeds.push({f: clamp((i + .5 + rnd(-.3, .3)) / n, .06, .94), n: 2 + (Math.random() * 2 | 0), ph: rnd(0, 6.3), sp: rnd(1.1, 1.8)});
+  fish.x = T.x0 + T.w * .3; fish.y = (B.y0 + B.y1) / 2;
+  sh.x = sh.tx = clamp(T.x0 + T.w * .72, T.x0 + cw / 2, T.x1 - cw / 2); sh.y = T.y0 - ch * .5 - 12;
+  for (let i = 0; i < 5; i++) bubble(T.x0 + T.w * rnd(.15, .85), rnd(T.surface + fs * 2, T.floor - fs), rnd(fs * .1, fs * .24));
+  shaker.hidden = false;
+  setTimeout(() => { if (sh.mode === 'rest') { sh.mode = 'pour'; sh.shakes = 3; } }, 900);
+  addEventListener('resize', layout);
+  last = performance.now();
+  requestAnimationFrame(frame);
+}
+layout();
+document.fonts.load(`700 24px "JetBrains Mono"`).then(start);
+}
+</script>
+</body>
+</html>
